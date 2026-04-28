@@ -1,103 +1,131 @@
+const countrySelect = document.getElementById("countrySelect");
 const wordEl = document.getElementById("word");
 const phoneticEl = document.getElementById("phonetic");
 const definitionsEl = document.getElementById("definitions");
-const playBtn = document.getElementById("playSound");
 const refreshBtn = document.getElementById("refreshBtn");
-const settingsBtn = document.getElementById("settingsBtn");
-const settingsPanel = document.getElementById("settingsPanel");
-const saveSettings = document.getElementById("saveSettings");
-const languageSelect = document.getElementById("languageSelect");
-const volumeControl = document.getElementById("volumeControl");
+const speakBtn = document.getElementById("speakBtn");
+const volumeSlider = document.getElementById("volume");
 
-let currentWord = "";
-let volume = 1;
-let language = "en";
+let usedWords = JSON.parse(localStorage.getItem("usedWords")) || [];
+let selectedCountry = localStorage.getItem("country") || "uk";
+let volume = localStorage.getItem("volume") || 1;
 
-// Load saved settings
-function loadSettings() {
-  const savedLang = localStorage.getItem("language");
-  const savedVolume = localStorage.getItem("volume");
+volumeSlider.value = volume;
 
-  if (savedLang) {
-    language = savedLang;
-    languageSelect.value = savedLang;
+const WORD_BANK = {
+  uk: {
+    flag: "🇬🇧 UK",
+    words: ["cheeky", "bloke", "gobsmacked", "knackered", "dodgy", "mate"]
+  },
+  usa: {
+    flag: "🇺🇸 USA Slang",
+    words: ["lit", "sus", "ghosted", "flex", "salty", "vibe"]
+  },
+  germany: {
+    flag: "🇩🇪 Germany",
+    words: ["Fernweh", "Schadenfreude", "Gemütlichkeit", "doch"]
+  },
+  italy: {
+    flag: "🇮🇹 Italy",
+    words: ["sprezzatura", "magari", "aperitivo"]
+  },
+  france: {
+    flag: "🇫🇷 France",
+    words: ["flâner", "retrouvailles", "dépaysement"]
+  },
+  spain: {
+    flag: "🇪🇸 Spain",
+    words: ["sobremesa", "duende", "jaleo"]
   }
-
-  if (savedVolume) {
-    volume = parseFloat(savedVolume);
-    volumeControl.value = savedVolume;
-  } else {
-    volumeControl.value = 1;
-  }
-}
-
-function saveUserSettings() {
-  language = languageSelect.value;
-  volume = volumeControl.value;
-
-  localStorage.setItem("language", language);
-  localStorage.setItem("volume", volume);
-
-  alert("Settings Saved ✅");
-  fetchWord();
-}
-
-settingsBtn.onclick = () => {
-  settingsPanel.classList.toggle("hidden");
 };
 
-saveSettings.onclick = saveUserSettings;
-
-refreshBtn.onclick = fetchWord;
-
-// Fetch random word
-async function fetchWord() {
-  const randomWordRes = await fetch("https://random-word-api.herokuapp.com/word");
-  const randomWordData = await randomWordRes.json();
-  currentWord = randomWordData[0];
-
-  const dictRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${currentWord}`);
-  const dictData = await dictRes.json();
-
-  displayWord(dictData[0]);
+// Populate country dropdown
+for (let key in WORD_BANK) {
+  let option = document.createElement("option");
+  option.value = key;
+  option.textContent = WORD_BANK[key].flag;
+  countrySelect.appendChild(option);
 }
 
-async function displayWord(data) {
-  wordEl.childNodes[0].nodeValue = data.word + " ";
-  phoneticEl.textContent = data.phonetic || "";
+countrySelect.value = selectedCountry;
 
+// Get new word without repeat
+function getNewWord() {
+  let words = WORD_BANK[selectedCountry].words;
+  let available = words.filter(w => !usedWords.includes(w));
+
+  if (available.length === 0) {
+    usedWords = [];
+    available = words;
+  }
+
+  const randomWord = available[Math.floor(Math.random() * available.length)];
+  usedWords.push(randomWord);
+
+  localStorage.setItem("usedWords", JSON.stringify(usedWords));
+
+  return randomWord;
+}
+
+// Fetch dictionary definition
+async function fetchDefinition(word) {
+  try {
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+    const data = await res.json();
+    return data[0];
+  } catch {
+    return null;
+  }
+}
+
+async function generateWord() {
   definitionsEl.innerHTML = "";
+  wordEl.childNodes[0].nodeValue = "Loading... ";
 
-  for (let meaning of data.meanings) {
-    const partOfSpeech = document.createElement("p");
-    partOfSpeech.innerHTML = `<strong>${meaning.partOfSpeech}</strong>`;
-    definitionsEl.appendChild(partOfSpeech);
+  const word = getNewWord();
+  const data = await fetchDefinition(word);
 
-    for (let def of meaning.definitions.slice(0, 3)) {
-      const translated = await translateText(def.definition);
-      const defEl = document.createElement("p");
-      defEl.textContent = translated;
-      definitionsEl.appendChild(defEl);
-    }
+  wordEl.childNodes[0].nodeValue = word + " ";
+
+  if (data) {
+    phoneticEl.textContent = data.phonetic || "";
+
+    data.meanings.slice(0,2).forEach(m => {
+      const part = document.createElement("p");
+      part.innerHTML = "<strong>" + m.partOfSpeech + "</strong>";
+      definitionsEl.appendChild(part);
+
+      m.definitions.slice(0,2).forEach(d => {
+        const def = document.createElement("p");
+        def.textContent = d.definition;
+        definitionsEl.appendChild(def);
+      });
+    });
+  } else {
+    phoneticEl.textContent = "";
+    const def = document.createElement("p");
+    def.textContent = "Common slang word used in " + WORD_BANK[selectedCountry].flag;
+    definitionsEl.appendChild(def);
   }
 }
 
-// Translate definition
-async function translateText(text) {
-  if (language === "en") return text;
+refreshBtn.onclick = generateWord;
 
-  const res = await fetch(`https://api.mymemory.translated.net/get?q=${text}&langpair=en|${language}`);
-  const data = await res.json();
-  return data.responseData.translatedText;
-}
-
-// Speech
-playBtn.onclick = () => {
-  const utterance = new SpeechSynthesisUtterance(currentWord);
-  utterance.lang = language;
-  utterance.volume = volume;
-  speechSynthesis.speak(utterance);
+countrySelect.onchange = () => {
+  selectedCountry = countrySelect.value;
+  localStorage.setItem("country", selectedCountry);
+  generateWord();
 };
 
-loadSettings();
-fetchWord();
+volumeSlider.oninput = () => {
+  volume = volumeSlider.value;
+  localStorage.setItem("volume", volume);
+};
+
+speakBtn.onclick = () => {
+  const utter = new SpeechSynthesisUtterance(wordEl.textContent);
+  utter.volume = volume;
+  speechSynthesis.speak(utter);
+};
+
+generateWord();
