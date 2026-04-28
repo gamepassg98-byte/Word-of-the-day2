@@ -1,52 +1,85 @@
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background: #111;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c7744);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
   color: white;
-  text-align: center;
+  overflow: hidden;
 }
 
-.container {
-  padding: 40px;
+.app {
+  text-align: center;
+  width: 95%;
+  max-width: 600px;
+}
+
+.logo {
+  font-size: 32px;
+  margin-bottom: 20px;
+  animation: fadeIn 1s ease-in-out;
 }
 
 .card {
-  background: #222;
+  background: rgba(0, 0, 0, 0.4);
   padding: 30px;
-  border-radius: 12px;
-  max-width: 600px;
-  margin: auto;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 40px rgba(0,255,120,0.3);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.card:hover {
+  transform: scale(1.02);
+}
+
+.top-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+select, button, input {
+  border-radius: 8px;
+  border: none;
+  padding: 6px 10px;
+  font-size: 14px;
 }
 
 button {
   cursor: pointer;
-  padding: 8px 12px;
-  margin: 5px;
-  border: none;
-  border-radius: 6px;
-  font-size: 16px;
+  background: #00c853;
+  color: white;
+  transition: 0.3s;
 }
 
-#playSound {
-  font-size: 14px;
+button:hover {
+  background: #00e676;
 }
 
-.controls {
-  margin-top: 20px;
+#word {
+  font-size: 28px;
+  margin: 15px 0;
 }
 
-#settingsPanel {
-  margin-top: 20px;
-  background: #1a1a1a;
-  padding: 20px;
-  border-radius: 10px;
+#definitions p {
+  margin: 6px 0;
+  opacity: 0;
+  animation: slideUp 0.5s forwards;
 }
 
-.hidden {
-  display: none;
+.settings {
+  margin-top: 15px;
 }
 
-select, input[type="range"] {
-  margin-top: 10px;
-  margin-bottom: 20px;
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from {opacity:0;}
+  to {opacity:1;}
 }
